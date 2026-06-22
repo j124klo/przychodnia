@@ -1,0 +1,84 @@
+package pl.polsl.przychodnia.controllers;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import pl.polsl.przychodnia.dto.WizytaDTO;
+import pl.polsl.przychodnia.entities.Wizyta;
+import pl.polsl.przychodnia.repositories.WizytaRepository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
+@RestController
+@RequestMapping("/wizyty")
+public class WizytaController {
+
+    @Autowired
+    private WizytaRepository wizytaRepository;
+
+    // POST /wizyty - Planowanie standardowej nowej wizyty
+    @PostMapping
+    public ResponseEntity<WizytaDTO> umowWizyta(@RequestBody Wizyta wizyta) {
+        Wizyta zapisana = wizytaRepository.save(wizyta);
+        return ResponseEntity.ok(konwertujNaDtoZLinkami(zapisana));
+    }
+
+    // GET /wizyty/{id} - Pobranie szczegółów pojedynczej wizyty
+    @GetMapping("/{id}")
+    public ResponseEntity<WizytaDTO> pobierzWizyte(@PathVariable Integer id) {
+        return wizytaRepository.findById(id)
+                .map(wizyta -> ResponseEntity.ok(konwertujNaDtoZLinkami(wizyta)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // GET /wizyty/pacjent/{pesel} - Scenariusz Zaawansowany 1: Historia medyczna
+    // pacjenta
+    @GetMapping("/pacjent/{pesel}")
+    public ResponseEntity<CollectionModel<WizytaDTO>> pobierzHistoriePacjenta(@PathVariable String pesel) {
+        List<WizytaDTO> wizyty = wizytaRepository.findByPacjentPesel(pesel).stream()
+                .map(this::konwertujNaDtoZLinkami)
+                .collect(Collectors.toList());
+
+        CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
+        model.add(linkTo(methodOn(WizytaController.class).pobierzHistoriePacjenta(pesel)).withSelfRel());
+        return ResponseEntity.ok(model);
+    }
+
+    // GET /wizyty/grafik/{pwzId} - Scenariusz Zaawansowany 2: Harmonogram lekarza
+    // na dany dzień
+    @GetMapping("/grafik/{pwzId}")
+    public ResponseEntity<CollectionModel<WizytaDTO>> pobierzGrafikLekarza(
+            @PathVariable String pwzId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+
+        List<WizytaDTO> wizyty = wizytaRepository.findByPersonelPwzIdAndData(pwzId, data).stream()
+                .map(this::konwertujNaDtoZLinkami)
+                .collect(Collectors.toList());
+
+        CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
+        model.add(linkTo(methodOn(WizytaController.class).pobierzGrafikLekarza(pwzId, data)).withSelfRel());
+        return ResponseEntity.ok(model);
+    }
+
+    // Pomocnicza metoda budująca strukturę HATEOAS
+    private WizytaDTO konwertujNaDtoZLinkami(Wizyta wizyta) {
+        WizytaDTO dto = new WizytaDTO(wizyta);
+        // Link self do konkretnej wizyty
+        dto.add(linkTo(methodOn(WizytaController.class).pobierzWizyte(wizyta.getId())).withSelfRel());
+
+        // HATEOAS: Relacyjne linki kierujące do zasobów zamiast zagnieżdżania całych
+        // obiektów!
+        if (wizyta.getPacjent() != null) {
+            dto.add(linkTo(methodOn(PacjentController.class).pobierzPacjenta(wizyta.getPacjent().getPesel()))
+                    .withRel("pacjent"));
+        }
+        return dto;
+    }
+}
