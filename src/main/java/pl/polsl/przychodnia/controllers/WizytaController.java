@@ -12,6 +12,7 @@ import pl.polsl.przychodnia.repositories.WizytaRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -67,6 +68,44 @@ public class WizytaController {
         return ResponseEntity.ok(model);
     }
 
+
+    // GET /wizyty - Wylistowanie wszystkich wizyt (READ ALL)
+    @GetMapping
+    public ResponseEntity<CollectionModel<WizytaDTO>> wylistujWizyty() {
+        List<WizytaDTO> wizyty = StreamSupport.stream(wizytaRepository.findAll().spliterator(), false)
+                .map(this::konwertujNaDtoZLinkami)
+                .collect(Collectors.toList());
+
+        CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
+        model.add(linkTo(methodOn(WizytaController.class).wylistujWizyty()).withSelfRel());
+        return ResponseEntity.ok(model);
+    }
+
+    // PUT /wizyty/{id} - Aktualizacja szczegółów wizyty (UPDATE)
+    @PutMapping("/{id}")
+    public ResponseEntity<WizytaDTO> aktualizujWizyte(@PathVariable Integer id, @RequestBody Wizyta zaktualizowanaWizyta) {
+        return wizytaRepository.findById(id)
+                .map(wizyta -> {
+                    wizyta.setData(zaktualizowanaWizyta.getData());
+                    wizyta.setAdresPrzychodni(zaktualizowanaWizyta.getAdresPrzychodni());
+                    wizyta.setDiagnoza(zaktualizowanaWizyta.getDiagnoza());
+                    
+                    Wizyta zapisana = wizytaRepository.save(wizyta);
+                    return ResponseEntity.ok(konwertujNaDtoZLinkami(zapisana));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // DELETE /wizyty/{id} - Usunięcie wizyty (DELETE)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> usunWizyte(@PathVariable Integer id) {
+        if (wizytaRepository.existsById(id)) {
+            wizytaRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+    
     // Pomocnicza metoda budująca strukturę HATEOAS
     private WizytaDTO konwertujNaDtoZLinkami(Wizyta wizyta) {
         WizytaDTO dto = new WizytaDTO(wizyta);

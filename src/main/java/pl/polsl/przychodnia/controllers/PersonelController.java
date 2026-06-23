@@ -59,4 +59,31 @@ public class PersonelController {
         model.add(linkTo(methodOn(PersonelController.class).wylistujPersonel()).withSelfRel());
         return ResponseEntity.ok(model);
     }
+
+    // PUT /personel/{pwzId} - Aktualizacja danych pracownika (UPDATE)
+    @PutMapping("/{pwzId}")
+    public ResponseEntity<PersonelDTO> aktualizujPracownika(@PathVariable String pwzId, @RequestBody Personel zaktualizowanyPersonel) {
+        return personelRepository.findById(pwzId)
+                .map(personel -> {
+                    personel.setImie(zaktualizowanyPersonel.getImie());
+                    personel.setNazwisko(zaktualizowanyPersonel.getNazwisko());
+                    personel.setZawod(zaktualizowanyPersonel.getZawod());
+                    
+                    Personel zapisany = personelRepository.save(personel);
+                    PersonelDTO dto = new PersonelDTO(zapisany);
+                    dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(dto.getPwzId())).withSelfRel());
+                    return ResponseEntity.ok(dto);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // DELETE /personel/{pwzId} - Usunięcie pracownika (DELETE)
+    @DeleteMapping("/{pwzId}")
+    public ResponseEntity<Void> usunPracownika(@PathVariable String pwzId) {
+        if (personelRepository.existsById(pwzId)) {
+            personelRepository.deleteById(pwzId);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 }
