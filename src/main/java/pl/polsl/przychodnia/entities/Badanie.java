@@ -14,7 +14,6 @@ public class Badanie {
     private Integer id;
 
     private String nazwaBadania;
-    private String placeholder;
 
     @ManyToMany(mappedBy = "badania")
     @JsonIgnore

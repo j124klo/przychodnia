@@ -13,7 +13,6 @@ public class Choroba {
     private String icd10;
 
     private String nazwaChoroby;
-    private String nazwaAtrybutu;
 
     @ManyToMany(mappedBy = "choroby")
     @JsonIgnore
