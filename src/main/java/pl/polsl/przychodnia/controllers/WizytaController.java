@@ -2,6 +2,7 @@ package pl.polsl.przychodnia.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/wizyty")
+@Transactional
 public class WizytaController {
 
     @Autowired
@@ -109,15 +111,44 @@ public class WizytaController {
     // Pomocnicza metoda budująca strukturę HATEOAS
     private WizytaDTO konwertujNaDtoZLinkami(Wizyta wizyta) {
         WizytaDTO dto = new WizytaDTO(wizyta);
+        
         // Link self do konkretnej wizyty
         dto.add(linkTo(methodOn(WizytaController.class).pobierzWizyte(wizyta.getId())).withSelfRel());
-
-        // HATEOAS: Relacyjne linki kierujące do zasobów zamiast zagnieżdżania całych
-        // obiektów!
+        
+        // Relacyjny link do pacjenta
         if (wizyta.getPacjent() != null) {
-            dto.add(linkTo(methodOn(PacjentController.class).pobierzPacjenta(wizyta.getPacjent().getPesel()))
-                    .withRel("pacjent"));
+            dto.add(linkTo(methodOn(PacjentController.class).pobierzPacjenta(wizyta.getPacjent().getPesel())).withRel("pacjent"));
         }
+
+        // Linki do przypisanego personelu
+        if (wizyta.getPersonel() != null) {
+            wizyta.getPersonel().forEach(personel -> 
+                dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(personel.getPwzId())).withRel("personel"))
+            );
+        }
+
+        // Linki do zdiagnozowanych chorób
+        if (wizyta.getChoroby() != null) {
+            wizyta.getChoroby().forEach(choroba -> 
+                // Uwaga: upewnij się, że getKod() to poprawna nazwa gettera dla ICD10 w klasie Choroba
+                dto.add(linkTo(methodOn(ChorobaController.class).pobierzChorobe(choroba.getIcd10())).withRel("choroba"))
+            );
+        }
+
+        // Linki do zleconych badań
+        if (wizyta.getBadania() != null) {
+            wizyta.getBadania().forEach(badanie -> 
+                dto.add(linkTo(methodOn(BadanieController.class).pobierzBadanie(badanie.getId())).withRel("badanie"))
+            );
+        }
+
+        // Linki do przypisanych leków
+        if (wizyta.getLeki() != null) {
+            wizyta.getLeki().forEach(lek -> 
+                dto.add(linkTo(methodOn(LekController.class).pobierzLek(lek.getId())).withRel("lek"))
+            );
+        }
+
         return dto;
     }
 }

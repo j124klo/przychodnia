@@ -7,18 +7,24 @@ import pl.polsl.przychodnia.entities.Wizyta;
 
 import java.time.LocalDate;
 
-@Getter
-@Setter
+@Getter @Setter
 public class WizytaDTO extends RepresentationModel<WizytaDTO> {
     private Integer id;
     private String adresPrzychodni;
     private LocalDate data;
     private String diagnoza;
+    
+    // Dodane brakujące pola
+    private String recepta;
+    private String skierowanie;
 
     public WizytaDTO(Wizyta wizyta) {
         this.id = wizyta.getId();
         this.adresPrzychodni = wizyta.getAdresPrzychodni();
         this.data = wizyta.getData();
         this.diagnoza = wizyta.getDiagnoza();
+        
+        this.recepta = wizyta.getRecepta();
+        this.skierowanie = wizyta.getSkierowanie();
     }
 }

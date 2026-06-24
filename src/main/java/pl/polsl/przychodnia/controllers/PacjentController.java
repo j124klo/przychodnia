@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.Link;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.przychodnia.dto.PacjentDTO;
 import pl.polsl.przychodnia.entities.Pacjent;
@@ -18,6 +19,7 @@ import java.util.stream.StreamSupport;
 
 @RestController
 @RequestMapping("/pacjenci")
+@Transactional
 public class PacjentController {
 
     @Autowired
