@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import pl.polsl.przychodnia.dto.LekDTO;
 import pl.polsl.przychodnia.entities.Lek;
 import pl.polsl.przychodnia.repositories.LekRepository;
@@ -17,6 +18,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/leki")
+@Transactional
 public class LekController {
 
     @Autowired

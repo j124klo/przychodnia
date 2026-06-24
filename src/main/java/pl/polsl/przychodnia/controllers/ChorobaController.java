@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import pl.polsl.przychodnia.dto.ChorobaDTO;
 import pl.polsl.przychodnia.entities.Choroba;
 import pl.polsl.przychodnia.repositories.ChorobaRepository;
@@ -17,6 +18,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/choroby")
+@Transactional
 public class ChorobaController {
 
     @Autowired
@@ -26,7 +28,7 @@ public class ChorobaController {
     public ResponseEntity<ChorobaDTO> dodajChorobe(@RequestBody Choroba choroba) {
         Choroba zapisana = chorobaRepository.save(choroba);
         ChorobaDTO dto = new ChorobaDTO(zapisana);
-        dto.add(linkTo(methodOn(ChorobaController.class).pobierzChorobe(dto.getKod())).withSelfRel());
+        dto.add(linkTo(methodOn(ChorobaController.class).pobierzChorobe(dto.getIcd10())).withSelfRel());
         return ResponseEntity.ok(dto);
     }
 
@@ -63,7 +65,7 @@ public class ChorobaController {
                     choroba.setNazwaChoroby(zaktualizowanaChoroba.getNazwaChoroby()); // Uaktualnij pozostałe pola wg potrzeb
                     Choroba zapisana = chorobaRepository.save(choroba);
                     ChorobaDTO dto = new ChorobaDTO(zapisana);
-                    dto.add(linkTo(methodOn(ChorobaController.class).pobierzChorobe(dto.getKod())).withSelfRel());
+                    dto.add(linkTo(methodOn(ChorobaController.class).pobierzChorobe(dto.getIcd10())).withSelfRel());
                     return ResponseEntity.ok(dto);
                 })
                 .orElse(ResponseEntity.notFound().build());

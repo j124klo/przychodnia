@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import pl.polsl.przychodnia.dto.PersonelDTO;
 import pl.polsl.przychodnia.entities.Personel;
 import pl.polsl.przychodnia.repositories.PersonelRepository;
@@ -17,6 +18,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/personel")
+@Transactional
 public class PersonelController {
 
     @Autowired

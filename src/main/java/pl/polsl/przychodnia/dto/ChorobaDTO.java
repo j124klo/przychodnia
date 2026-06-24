@@ -7,11 +7,11 @@ import pl.polsl.przychodnia.entities.Choroba;
 
 @Getter @Setter
 public class ChorobaDTO extends RepresentationModel<ChorobaDTO> {
-    private String kod; // Założenie: Klucz główny to String
-    private String nazwa;
+    private String icd10;
+    private String nazwaChoroby;
 
     public ChorobaDTO(Choroba choroba) {
-        this.kod = choroba.getIcd10(); // Dostosuj gettery do swojej encji
-        this.nazwa = choroba.getNazwaChoroby();
+        this.icd10 = choroba.getIcd10();
+        this.nazwaChoroby = choroba.getNazwaChoroby();
     }
 }

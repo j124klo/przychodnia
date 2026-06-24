@@ -8,10 +8,10 @@ import pl.polsl.przychodnia.entities.Badanie;
 @Getter @Setter
 public class BadanieDTO extends RepresentationModel<BadanieDTO> {
     private Integer id;
-    private String nazwa;
+    private String nazwaBadania;
 
     public BadanieDTO(Badanie badanie) {
         this.id = badanie.getId();
-        this.nazwa = badanie.getNazwaBadania();
+        this.nazwaBadania = badanie.getNazwaBadania();
     }
 }

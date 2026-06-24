@@ -8,10 +8,14 @@ import pl.polsl.przychodnia.entities.Lek;
 @Getter @Setter
 public class LekDTO extends RepresentationModel<LekDTO> {
     private Integer id;
-    private String nazwa;
+    private String nazwaLeku;
+    private String dawka;
+    private String substancjaAktywna;
 
     public LekDTO(Lek lek) {
         this.id = lek.getId();
-        this.nazwa = lek.getNazwaLeku();
+        this.nazwaLeku = lek.getNazwaLeku(); 
+        this.dawka = lek.getDawka();
+        this.substancjaAktywna = lek.getSubstancjaAktywna();
     }
 }

@@ -5,8 +5,7 @@ import lombok.Setter;
 import org.springframework.hateoas.RepresentationModel;
 import pl.polsl.przychodnia.entities.Personel;
 
-@Getter
-@Setter
+@Getter @Setter
 public class PersonelDTO extends RepresentationModel<PersonelDTO> {
     private String pwzId;
     private String imie;
