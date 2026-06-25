@@ -9,7 +9,7 @@ import java.util.Set;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class Personel {
 
-    @Id // PWZ ID wpisujemy ręcznie
+    @Id
     private String pwzId;
 
     private String imie;

@@ -5,6 +5,4 @@ import org.springframework.stereotype.Repository;
 import pl.polsl.przychodnia.entities.Lek;
 
 @Repository
-public interface LekRepository extends CrudRepository<Lek, Integer> {
-    // Klucz główny to Integer (ID leku)
-}
+public interface LekRepository extends CrudRepository<Lek, Integer> {}

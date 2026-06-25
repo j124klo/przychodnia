@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Obsługa błędu 400 (Bad Request) - np. gdy ktoś wyśle uszkodzonego JSONa
+    // Obsługa błędu 400 (Bad Request)
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(HttpMessageNotReadableException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
@@ -22,8 +22,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
-    // Obsługa błędu 500 (Internal Server Error) - czyli wszelkich nieprzewidzianych
-    // awarii kodu
+    // Obsługa błędu 500 (Internal Server Error)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllUncaughtExceptions(Exception ex) {
         ErrorResponse errorResponse = new ErrorResponse(

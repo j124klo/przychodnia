@@ -5,6 +5,4 @@ import org.springframework.stereotype.Repository;
 import pl.polsl.przychodnia.entities.Badanie;
 
 @Repository
-public interface BadanieRepository extends CrudRepository<Badanie, Integer> {
-    // Klucz główny to Integer (ID badania)
-}
+public interface BadanieRepository extends CrudRepository<Badanie, Integer> {}

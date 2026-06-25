@@ -1,81 +1,31 @@
 package pl.polsl.przychodnia.controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.przychodnia.dto.WizytaDTO;
-import pl.polsl.przychodnia.entities.Wizyta;
-import pl.polsl.przychodnia.repositories.WizytaRepository;
+import pl.polsl.przychodnia.services.WizytaService;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/wizyty")
-@Transactional
+@RequiredArgsConstructor
 public class WizytaController {
 
-    @Autowired
-    private WizytaRepository wizytaRepository;
+    private final WizytaService wizytaService;
 
-    // POST /wizyty - Planowanie standardowej nowej wizyty
-    @PostMapping
-    public ResponseEntity<WizytaDTO> umowWizyta(@RequestBody Wizyta wizyta) {
-        Wizyta zapisana = wizytaRepository.save(wizyta);
-        return ResponseEntity.ok(konwertujNaDtoZLinkami(zapisana));
-    }
-
-    // GET /wizyty/{id} - Pobranie szczegółów pojedynczej wizyty
-    @GetMapping("/{id}")
-    public ResponseEntity<WizytaDTO> pobierzWizyte(@PathVariable Integer id) {
-        return wizytaRepository.findById(id)
-                .map(wizyta -> ResponseEntity.ok(konwertujNaDtoZLinkami(wizyta)))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // GET /wizyty/pacjent/{pesel} - Scenariusz Zaawansowany 1: Historia medyczna
-    // pacjenta
-    @GetMapping("/pacjent/{pesel}")
-    public ResponseEntity<CollectionModel<WizytaDTO>> pobierzHistoriePacjenta(@PathVariable String pesel) {
-        List<WizytaDTO> wizyty = wizytaRepository.findByPacjentPesel(pesel).stream()
-                .map(this::konwertujNaDtoZLinkami)
-                .collect(Collectors.toList());
-
-        CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
-        model.add(linkTo(methodOn(WizytaController.class).pobierzHistoriePacjenta(pesel)).withSelfRel());
-        return ResponseEntity.ok(model);
-    }
-
-    // GET /wizyty/grafik/{pwzId} - Scenariusz Zaawansowany 2: Harmonogram lekarza
-    // na dany dzień
-    @GetMapping("/grafik/{pwzId}")
-    public ResponseEntity<CollectionModel<WizytaDTO>> pobierzGrafikLekarza(
-            @PathVariable String pwzId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-
-        List<WizytaDTO> wizyty = wizytaRepository.findByPersonelPwzIdAndData(pwzId, data).stream()
-                .map(this::konwertujNaDtoZLinkami)
-                .collect(Collectors.toList());
-
-        CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
-        model.add(linkTo(methodOn(WizytaController.class).pobierzGrafikLekarza(pwzId, data)).withSelfRel());
-        return ResponseEntity.ok(model);
-    }
-
-
-    // GET /wizyty - Wylistowanie wszystkich wizyt (READ ALL)
     @GetMapping
     public ResponseEntity<CollectionModel<WizytaDTO>> wylistujWizyty() {
-        List<WizytaDTO> wizyty = StreamSupport.stream(wizytaRepository.findAll().spliterator(), false)
-                .map(this::konwertujNaDtoZLinkami)
+        List<WizytaDTO> wizyty = wizytaService.wylistujWizyty().stream()
+                .map(this::dodajLinkiHateoas)
                 .collect(Collectors.toList());
 
         CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
@@ -83,72 +33,98 @@ public class WizytaController {
         return ResponseEntity.ok(model);
     }
 
-    // PUT /wizyty/{id} - Aktualizacja szczegółów wizyty (UPDATE)
-    @PutMapping("/{id}")
-    public ResponseEntity<WizytaDTO> aktualizujWizyte(@PathVariable Integer id, @RequestBody Wizyta zaktualizowanaWizyta) {
-        return wizytaRepository.findById(id)
-                .map(wizyta -> {
-                    wizyta.setData(zaktualizowanaWizyta.getData());
-                    wizyta.setAdresPrzychodni(zaktualizowanaWizyta.getAdresPrzychodni());
-                    wizyta.setDiagnoza(zaktualizowanaWizyta.getDiagnoza());
-                    
-                    Wizyta zapisana = wizytaRepository.save(wizyta);
-                    return ResponseEntity.ok(konwertujNaDtoZLinkami(zapisana));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/{id}")
+    public ResponseEntity<WizytaDTO> pobierzWizyte(@PathVariable Integer id) {
+        try {
+            WizytaDTO dto = wizytaService.pobierzWizyte(id);
+            return ResponseEntity.ok(dodajLinkiHateoas(dto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    // DELETE /wizyty/{id} - Usunięcie wizyty (DELETE)
+    @GetMapping("/pacjent/{pesel}")
+    public ResponseEntity<CollectionModel<WizytaDTO>> pobierzHistoriePacjenta(@PathVariable String pesel) {
+        List<WizytaDTO> wizyty = wizytaService.pobierzHistoriePacjenta(pesel).stream()
+                .map(this::dodajLinkiHateoas)
+                .collect(Collectors.toList());
+
+        CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
+        model.add(linkTo(methodOn(WizytaController.class).pobierzHistoriePacjenta(pesel)).withSelfRel());
+        return ResponseEntity.ok(model);
+    }
+
+    @GetMapping("/grafik/{pwzId}")
+    public ResponseEntity<CollectionModel<WizytaDTO>> pobierzGrafikLekarza(
+            @PathVariable String pwzId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+        
+        List<WizytaDTO> wizyty = wizytaService.pobierzGrafikLekarza(pwzId, data).stream()
+                .map(this::dodajLinkiHateoas)
+                .collect(Collectors.toList());
+
+        CollectionModel<WizytaDTO> model = CollectionModel.of(wizyty);
+        model.add(linkTo(methodOn(WizytaController.class).pobierzGrafikLekarza(pwzId, data)).withSelfRel());
+        return ResponseEntity.ok(model);
+    }
+
+    @PostMapping
+    public ResponseEntity<WizytaDTO> dodajWizyte(@RequestBody WizytaDTO wejsciowyDto) {
+        try {
+            WizytaDTO noweDto = wizytaService.utworzWizyte(wejsciowyDto);
+            return ResponseEntity.ok(dodajLinkiHateoas(noweDto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<WizytaDTO> aktualizujWizyte(@PathVariable Integer id, @RequestBody WizytaDTO wejsciowyDto) {
+        try {
+            WizytaDTO zaktualizowaneDto = wizytaService.aktualizujWizyte(id, wejsciowyDto);
+            return ResponseEntity.ok(dodajLinkiHateoas(zaktualizowaneDto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> usunWizyte(@PathVariable Integer id) {
-        if (wizytaRepository.existsById(id)) {
-            wizytaRepository.deleteById(id);
+        try {
+            wizytaService.usunWizyte(id);
             return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.notFound().build();
     }
-    
-    // Pomocnicza metoda budująca strukturę HATEOAS
-    private WizytaDTO konwertujNaDtoZLinkami(Wizyta wizyta) {
-        WizytaDTO dto = new WizytaDTO(wizyta);
+
+    // Metoda pomocnicza przyjmująca DTO, pracująca wyłącznie na mapowanych listach ID
+    private WizytaDTO dodajLinkiHateoas(WizytaDTO dto) {
+        dto.add(linkTo(methodOn(WizytaController.class).pobierzWizyte(dto.getId())).withSelfRel());
         
-        // Link self do konkretnej wizyty
-        dto.add(linkTo(methodOn(WizytaController.class).pobierzWizyte(wizyta.getId())).withSelfRel());
-        
-        // Relacyjny link do pacjenta
-        if (wizyta.getPacjent() != null) {
-            dto.add(linkTo(methodOn(PacjentController.class).pobierzPacjenta(wizyta.getPacjent().getPesel())).withRel("pacjent"));
+        if (dto.getPacjentPesel() != null) {
+            dto.add(linkTo(methodOn(PacjentController.class).pobierzPacjenta(dto.getPacjentPesel())).withRel("pacjent"));
         }
-
-        // Linki do przypisanego personelu
-        if (wizyta.getPersonel() != null) {
-            wizyta.getPersonel().forEach(personel -> 
-                dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(personel.getPwzId())).withRel("personel"))
+        if (dto.getPersonelPwzIds() != null) {
+            dto.getPersonelPwzIds().forEach(pwzId -> 
+                dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(pwzId)).withRel("personel"))
             );
         }
-
-        // Linki do zdiagnozowanych chorób
-        if (wizyta.getChoroby() != null) {
-            wizyta.getChoroby().forEach(choroba -> 
-                // Uwaga: upewnij się, że getKod() to poprawna nazwa gettera dla ICD10 w klasie Choroba
-                dto.add(linkTo(methodOn(ChorobaController.class).pobierzChorobe(choroba.getIcd10())).withRel("choroba"))
+        if (dto.getChorobyIcd10() != null) {
+            dto.getChorobyIcd10().forEach(icd10 -> 
+                dto.add(linkTo(methodOn(ChorobaController.class).pobierzChorobe(icd10)).withRel("choroba"))
             );
         }
-
-        // Linki do zleconych badań
-        if (wizyta.getBadania() != null) {
-            wizyta.getBadania().forEach(badanie -> 
-                dto.add(linkTo(methodOn(BadanieController.class).pobierzBadanie(badanie.getId())).withRel("badanie"))
+        if (dto.getBadaniaIds() != null) {
+            dto.getBadaniaIds().forEach(id -> 
+                dto.add(linkTo(methodOn(BadanieController.class).pobierzBadanie(id)).withRel("badanie"))
             );
         }
-
-        // Linki do przypisanych leków
-        if (wizyta.getLeki() != null) {
-            wizyta.getLeki().forEach(lek -> 
-                dto.add(linkTo(methodOn(LekController.class).pobierzLek(lek.getId())).withRel("lek"))
+        if (dto.getLekiIds() != null) {
+            dto.getLekiIds().forEach(id -> 
+                dto.add(linkTo(methodOn(LekController.class).pobierzLek(id)).withRel("lek"))
             );
         }
-
         return dto;
     }
 }

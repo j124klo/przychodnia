@@ -1,91 +1,80 @@
 package pl.polsl.przychodnia.controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.transaction.annotation.Transactional;
 import pl.polsl.przychodnia.dto.PersonelDTO;
 import pl.polsl.przychodnia.entities.Personel;
-import pl.polsl.przychodnia.repositories.PersonelRepository;
+import pl.polsl.przychodnia.services.PersonelService;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/personel")
-@Transactional
+@RequiredArgsConstructor
 public class PersonelController {
 
-    @Autowired
-    private PersonelRepository personelRepository;
+    private final PersonelService personelService;
 
-    // POST /personel - Dodanie nowego pracownika medycznego
-    @PostMapping
-    public ResponseEntity<PersonelDTO> dodajPracownika(@RequestBody Personel personel) {
-        Personel zapisany = personelRepository.save(personel);
-        PersonelDTO dto = new PersonelDTO(zapisany);
-        dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(dto.getPwzId())).withSelfRel());
-        return ResponseEntity.ok(dto);
-    }
-
-    // GET /personel/{pwzId} - Pobranie danych konkretnego pracownika
-    @GetMapping("/{pwzId}")
-    public ResponseEntity<PersonelDTO> pobierzPracownika(@PathVariable String pwzId) {
-        return personelRepository.findById(pwzId)
-                .map(personel -> {
-                    PersonelDTO dto = new PersonelDTO(personel);
-                    dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(pwzId)).withSelfRel());
-                    return ResponseEntity.ok(dto);
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // GET /personel - Listowanie całego personelu przychodni (Użycie
-    // CollectionModel dla HATEOAS)
     @GetMapping
     public ResponseEntity<CollectionModel<PersonelDTO>> wylistujPersonel() {
-        List<PersonelDTO> personelList = StreamSupport.stream(personelRepository.findAll().spliterator(), false)
-                .map(p -> {
-                    PersonelDTO dto = new PersonelDTO(p);
-                    dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(p.getPwzId())).withSelfRel());
-                    return dto;
-                })
+        List<PersonelDTO> personel = personelService.wylistujPersonel().stream()
+                .map(this::konwertujNaDtoZLinkami)
                 .collect(Collectors.toList());
 
-        CollectionModel<PersonelDTO> model = CollectionModel.of(personelList);
+        CollectionModel<PersonelDTO> model = CollectionModel.of(personel);
         model.add(linkTo(methodOn(PersonelController.class).wylistujPersonel()).withSelfRel());
         return ResponseEntity.ok(model);
     }
 
-    // PUT /personel/{pwzId} - Aktualizacja danych pracownika (UPDATE)
-    @PutMapping("/{pwzId}")
-    public ResponseEntity<PersonelDTO> aktualizujPracownika(@PathVariable String pwzId, @RequestBody Personel zaktualizowanyPersonel) {
-        return personelRepository.findById(pwzId)
-                .map(personel -> {
-                    personel.setImie(zaktualizowanyPersonel.getImie());
-                    personel.setNazwisko(zaktualizowanyPersonel.getNazwisko());
-                    personel.setZawod(zaktualizowanyPersonel.getZawod());
-                    
-                    Personel zapisany = personelRepository.save(personel);
-                    PersonelDTO dto = new PersonelDTO(zapisany);
-                    dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(dto.getPwzId())).withSelfRel());
-                    return ResponseEntity.ok(dto);
-                })
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/{pwzId}")
+    public ResponseEntity<PersonelDTO> pobierzPracownika(@PathVariable String pwzId) {
+        try {
+            Personel personel = personelService.pobierzPracownika(pwzId);
+            return ResponseEntity.ok(konwertujNaDtoZLinkami(personel));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    // DELETE /personel/{pwzId} - Usunięcie pracownika (DELETE)
+    @PostMapping
+    public ResponseEntity<PersonelDTO> dodajPracownika(@RequestBody PersonelDTO wejsciowyDto) {
+        try {
+            Personel nowy = personelService.utworzPracownika(wejsciowyDto);
+            return ResponseEntity.ok(konwertujNaDtoZLinkami(nowy));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{pwzId}")
+    public ResponseEntity<PersonelDTO> aktualizujPracownika(@PathVariable String pwzId, @RequestBody PersonelDTO wejsciowyDto) {
+        try {
+            Personel zaktualizowany = personelService.aktualizujPracownika(pwzId, wejsciowyDto);
+            return ResponseEntity.ok(konwertujNaDtoZLinkami(zaktualizowany));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @DeleteMapping("/{pwzId}")
     public ResponseEntity<Void> usunPracownika(@PathVariable String pwzId) {
-        if (personelRepository.existsById(pwzId)) {
-            personelRepository.deleteById(pwzId);
+        try {
+            personelService.usunPracownika(pwzId);
             return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.notFound().build();
+    }
+
+    private PersonelDTO konwertujNaDtoZLinkami(Personel personel) {
+        PersonelDTO dto = new PersonelDTO(personel);
+        dto.add(linkTo(methodOn(PersonelController.class).pobierzPracownika(personel.getPwzId())).withSelfRel());
+        return dto;
     }
 }

@@ -5,6 +5,4 @@ import org.springframework.stereotype.Repository;
 import pl.polsl.przychodnia.entities.Choroba;
 
 @Repository
-public interface ChorobaRepository extends CrudRepository<Choroba, String> {
-    // Klucz główny to String (ICD-10)
-}
+public interface ChorobaRepository extends CrudRepository<Choroba, String> {}

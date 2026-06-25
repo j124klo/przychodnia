@@ -10,7 +10,7 @@ import java.util.Set;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class Pacjent {
 
-    @Id // Brak GeneratedValue, bo PESEL wpisujemy ręcznie
+    @Id
     private String pesel;
 
     private String imie;
@@ -21,7 +21,6 @@ public class Pacjent {
     private Double masa;
     private String grupaKrwi;
 
-    // Kaskadowość do scenariusza z umawianiem pierwszej wizyty
     @OneToMany(mappedBy = "pacjent", cascade = CascadeType.ALL)
     @JsonIgnore
     private Set<Wizyta> wizyty;
